@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "_macros.html" as macros %}
+
+
+{% block title %}
+    Flasky - Post
+{% endblock %}
+
+{% block page_content %}
+    <h2 >POST</h2>
+    {% include "_posts.html" %}
+    <h2><a id="comments">comments</a></h2>
+    <div class="comments">
+        <div class="comment-form">
+            {% if current_user.is_authenticated %}
+                {{ wtf.quick_form(form) }}
+            {% endif %}
+        </div>
+        {% include "_comments.html" %}
+        <div class="pagination">
+            {{ macros.pagination_widget(pagination, "main.post", post_id=posts[0].id, fragment="#comments" )}}
+        </div>
+    </div>
+
+{% endblock %}

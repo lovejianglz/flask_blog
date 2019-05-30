@@ -1,0 +1,3 @@
+set FLASK_APP=flasky.py
+set FLASK_DEBUG=1
+set MAIL_PASSWORD=j123456

@@ -1,0 +1,2 @@
+Hello, {{user.username}}~
+这里是一个邮件发送.

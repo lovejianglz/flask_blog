@@ -1,3 +1,6 @@
 /venv/
 *.pyc
 /.idea/
+set_enviroment.bat
+/tmp/
+/test1.py

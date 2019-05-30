@@ -1,0 +1,7 @@
+Generic single-database configuration.
+
+数据库迁移操作：
+1. 对数据库模型做修改
+2. 执行flask db migrate
+3. 检查脚本
+4. 执行flask db upgrade

@@ -1,0 +1,146 @@
+# 上下文
+## 应用上下文
+* current_app
+* g
+* *with app.app_context()* 获取应用上下文
+* *app=current_app._get_current_object()* 获取应用上下文
+## 请求上下文
+* request
+* session
+## app
+* app_context()
+	* app_context.push()
+	* app_context.pop()
+
+# 响应
+1. 如果返回的是一个合法的响应对象，它会从视图直接返回。
+2. 如果返回的是一个字符串，响应对象会用字符串数据和默认参数创建。
+3。 如果返回的是一个元组，且元组中的元素可以提供额外的信息。这样的元组必须是 (response, status, headers) 的形式，且至少包含一个元素。 status 值会覆盖状态代码， headers 可以是一个列表或字典，作为额外的消息标头值。
+4. 如果上述条件均不满足， Flask 会假设返回值是一个合法的 WSGI 应用程序，并转换为一个请求对象
+
+# threading
+## threading.Lock()
+* 线程锁对象，多线程时用来保护共享的内存
+* *lock.acquire()* 获取锁，保护共享内存
+* *lock.release()* 释放锁，如果不能正确释放，则会导致其余线程一直在等待
+	```
+	#!/usr/bin/env python3
+
+	import time, threading
+
+	balance = 0
+	lock = threading.Lock()
+
+	def change_it(n):
+		# 先存后取，结果应该为0:
+		global balance
+		balance = balance + n
+		balance = balance - n
+
+	def run_thread(n):
+		for i in range(100000):
+			# 先要获取锁:
+			lock.acquire()
+			try:
+				# 放心地改吧:
+				change_it(n)
+			finally:
+				# 改完了一定要释放锁:
+				lock.release()
+	t1 = threading.Thread(target=run_thread, args=(5,))
+	t2 = threading.Thread(target=run_thread, args=(8,))
+	t1.start()
+	t2.start()
+	t1.join()
+	t2.join()
+	print(balance)
+	执行结果：
+	[root@localhost ~]# python3 thread_lock.py 
+	[root@localhost ~]# python3 thread_lock.py 
+	[root@localhost ~]# python3 thread_lock.py 
+	[root@localhost ~]# python3 thread_lock.py 
+	[root@localhost ~]# python3 thread_lock.py 
+	[root@localhost ~]# python3 thread_lock.py
+	```
+## threading.local()
+* 为每一个线程创建一个值，使得线程间各自操作自己的值，互不影响
+	```
+	import time
+	import threading
+
+	local = threading.local()
+
+	def func(n):
+		local.val = n
+		time.sleep(5)
+		print(n)
+
+	for i in range(10):
+		t = threading.Thread(target=func,args=(i,))
+		t.start()
+
+	# 结果输出    0--9
+	```
+	
+# Flask_Login
+## current_user
+* current_user由Flask_Login定义，在视图函数和模板中自动可用，这个变量的值是当前登陆的用户，匿名用户对象的is_authenticated属性是False
+* login_user(user) 登陆用户，usr为User模型的对象，必须实现规定的方法及属性，或继承UserMixin，实际上是吧User中的id转为字符串后保存到 *session* 中
+* logout_user()登出用户
+## login_required
+* 在访问被 *@login_required* 装饰的地址是需要用户登陆的
+* 当用户没有登陆时会把原URL保存在查询字符串的 *next* 参数中，并重定向到login_manager.login_view指定的路由。
+## 用户登陆的过程
+1. 通过调用 *login_user()* 函数登入用户
+2. *login_user()* 函数把用户ID以字符串的形式写入用户会话
+3. 跳转至其它页面
+4. 这是请求还有没给上下文变量 *current_user* 赋值，因此调用 *_get_user()* 函数找出用户是谁
+5. *_get_user()* 函数检查用户会话中有没有用户ID。如果没有，返回一个AnonymousUser实例。如果有，调用应用中使用 *@user_loader* 装饰器注册的函数，传入用户 *id*
+6. 应用中 *user_loader* 处理函数从数据库读取用户，将其返回，并把返回值赋给当前请求的 *current_user* 上下文变量。
+
+# wraps的作用
+* 保证函数被装饰后的属性 (__doc__, __name__)与函数本身一致
+* 装饰器典型用法
+	```
+	from functools import wraps
+	# 对函数的装饰器， 对类func最好为cls
+	def decorate(func):
+		@wraps(func)
+		# 增添或修改功能的函数
+		def wrapper(*args,**kwargs):
+					# 执行被装饰的函数
+			result = func(*args,**kwargs) 
+			# 返回结果
+			return result
+		# 返回内层函数
+		return wrapper
+	```
+
+# HTTP Basic Auth
+* 认证过程：
+	1. 客户端请求一个需要身份认证的页面，但是没有提供用户名和口令。这通常是用户在地址栏输入一个URL，或是打开了一个指向该页面的链接。
+	2. 服务端响应一个401应答码，并提供一个认证域。
+	3. 接到应答后，客户端显示该认证域（通常是所访问的计算机或系统的描述）给用户并提示输入用户名和口令。此时用户可以选择确定或取消。
+	4. 用户输入了用户名和口令后，客户端软件会在原先的请求上增加认证消息头（值是base64encode(username+":"+password)），然后重新发送再次尝试。
+	5. 如果用户凭据非法或无效，服务器可能再次返回401应答码，客户端可以再次提示用户输入口令。
+* 请求头为: *Authorization: Basic (username:password)*
+
+
+# 数据库迁移
+1. flask db init 初始化数据库迁移目录
+2. 对数据库作修改
+3. flask db migrate 创建迁移脚本
+4. flask db upgrade 把改动更新到数据库中
+
+# SQLAlchemy
+## db.backref() 
+指定引用的参数，主要是*lazy*参数, *lazy*默认是*select*为直接返回结果，而*dynamic*是延迟加载数据，即返回*query*对象，“joined”，建立关联表，如果有很多个项目时提高效率，但会增加数据库的大小。
+## db.relationship()
+两个模型间建立关联.
+
+# SQL
+## JOIN
+* JOIN: 如果表中有至少一个匹配，则返回行
+* LEFT JOIN: 即使右表中没有匹配，也从左表返回所有的行
+* RIGHT JOIN: 即使左表中没有匹配，也从右表返回所有的行
+* FULL JOIN: 只要其中一个表中存在匹配，就返回行
